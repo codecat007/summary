@@ -26,13 +26,13 @@ def write_csv(dip, dport,proto,sip_dtf,inif_dtf,outif_dtf,hit_cnt):
     sip_dtf = sip_dtf.sort_values(ascending=False)
 
     for m in inif_dtf.index:
-        inif_line = inif_line + str(inif_dtf[m]) + "-"
+        inif_line = inif_line + str(inif_dtf[m]) + ";"
 
     for n in outif_dtf.index:
-        outif_line = outif_line + str(outif_dtf[n]) + "-"
+        outif_line = outif_line + str(outif_dtf[n]) + ";"
 
     for i in sip_dtf.index:
-        sip_line = sip_line + str(sip_dtf[i]) + "-"
+        sip_line = sip_line + str(sip_dtf[i]) + ";"
 
     inif_line = inif_line[:-1]
     outif_line = outif_line[:-1]
@@ -104,16 +104,65 @@ def study_not_tcpudp_loop(dtf):
             write_csv(dip_dtf[i], 0, proto_dtf[j], sip_dtf,inif_dtf,outif_dtf,hit_cnt)
 
 #dtf.to_csv('D:\\a.csv', sep=',', header=True, index=True)
+def get_second_study_des(dtf):
+    dipstr = ""
+    inifstr = ""
+    outifstr = ""
+    src_ips = ""
+    hit_cnts = 0
+    sip_cnt = 0
+    dport = 0
+    proto = 0
+    dip_cnt = dtf.dip.drop_duplicates().count()
+
+    inifs = dtf.inif.drop_duplicates()
+    outifs = dtf.outif.drop_duplicates()
+
+    for i in dtf.index:
+        dipstr = dipstr + str(dtf.loc[i].dip) + ";"
+        hit_cnts  += dtf.loc[i].hit_cnt
+        src_ips = dtf.loc[i].src_ip
+        sip_cnt = dtf.loc[i].sip_cnt
+        dport = dtf.loc[i].dport
+        proto = dtf.loc[i].proto
+
+    for i in inifs.index:
+        inifstr = inifstr + inifs[i]  + ";"
+
+    for i in outifs.index:
+        outifstr = outifstr + outifs[i]  + ";"
+
+    dipstr = dipstr[:-1]
+    return (hit_cnts,sip_cnt,dip_cnt,dipstr,dport,proto,inifstr,outifstr,src_ips)
+
+def second_study(dtf):
+    output_df = pd.DataFrame(columns=["hit_cnt","sip_cnt","dip_cnt", "dip", "dport", "proto", "inif", "outif", "src_ip"])
+    tmp = dtf.src_ip.drop_duplicates()
+    for i in tmp.index:
+        src_dtf = dtf[dtf['src_ip'] == tmp[i]]
+        dport_dtf = src_dtf.dport.drop_duplicates()
+        for j in dport_dtf.index:
+            src_dp_dtf = dtf[(dtf['src_ip'] == tmp[i]) & (dtf['dport'] == dport_dtf[j])]
+            (a,b,c,d,e,f,g,h,k) = get_second_study_des(src_dp_dtf)
+            #print d, src_dtf.loc[str(0)].sip_cnt, a
+            new = pd.DataFrame([[a,b,c,d,e,f,g,h,k]], columns=["hit_cnt", "sip_cnt", "dip_cnt", "dip", "dport", "proto", "inif", "outif", "src_ip"])
+            output_df = output_df.append(new,ignore_index=True)
+    output_df = output_df.sort_values(by=['hit_cnt', 'sip_cnt'], ascending=False)
+    output_df.to_csv(OUTPUT_CSV, encoding='utf-8', index=False)
+    #output_df.to_excel('second_result.xlsx', header=True, index=False)
+    return output_df
 
 if __name__ == '__main__':
 
     if len(sys.argv) < 2 or sys.argv[1] == "-h":
-        usage = "Usage:" + sys.argv[0] + " input.csv(输入数据集) " + "{output.csv(输出数据集)} "
+        usage = "Usage:" + sys.argv[0] + " input.csv(输入数据集) " + "{output.csv(输出数据集)} " + "{学习深度(1|2)}"
         print usage
         sys.exit()
     input_csv = sys.argv[1]
-    if(len(sys.argv) > 2):
+    deep_level = 1
+    if(len(sys.argv) > 3):
         OUTPUT_CSV = sys.argv[2]
+        deep_level = int(sys.argv[3])
 
     dtf = pd.read_csv(sys.argv[1],header=0)
     print "分析开始..."
@@ -137,9 +186,16 @@ if __name__ == '__main__':
     print "学习出元策略个数：",g_output_df.dip.count()
     print "结果排序..."
 
-    g_output_df = g_output_df.sort_values(by=['hit_cnt','sip_cnt'],ascending=False)
-    g_output_df.to_csv(OUTPUT_CSV, encoding='utf-8', index=False)
-    g_output_df.to_excel('test_write.xlsx', header=True, index=False)
+    if (deep_level == 1):
+        g_output_df = g_output_df.sort_values(by=['hit_cnt', 'sip_cnt'], ascending=False)
+        g_output_df.to_csv(OUTPUT_CSV, encoding='utf-8', index=False)
+        #g_output_df.to_excel('first_study.xlsx', header=True, index=False)
+    elif(deep_level == 2):
+        print "深度2分析开始..."
+        second_study_dtf = second_study(g_output_df)
+        print "深度2分析结束...",second_study_dtf.dip.count()
+        #print second_study_dtf.src_ip.drop_duplicates().count()
+
     #print g_output_df
     #out_dtf = pd.read_csv(OUTPUT_CSV, header=0)
     #out_dtf.sort_index()
