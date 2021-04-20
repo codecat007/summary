@@ -36,7 +36,7 @@ policycoreutils-default-encoding==0.1
 post==0.0.13
 ptyprocess==0.5.2
 public==0.0.38
-py==1.4.34
+py==1.10.0
 py2-ipaddress==3.4.1
 pycurl==7.19.0
 pygobject==3.14.0
