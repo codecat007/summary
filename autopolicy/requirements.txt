@@ -26,7 +26,7 @@ kitchen==1.1.1
 Logbook==0.7.0
 lxml==4.1.1
 MarkupSafe==1.0
-numpy==1.14.0
+numpy==1.22.0
 openpyxl==2.5.0
 pandas==0.22.0
 pandasql==0.7.3
